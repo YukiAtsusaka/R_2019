@@ -1,0 +1,157 @@
+---
+title: "RHW3"
+author: "Rabia Suleiman"
+date: "8/23/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Schools are a stabilizing feature in the unsettled lives of immigrant youth.
+They provide a safe space, learning opportunities, and diverse interactions. 
+Extensive research indicares that educators and the school  environment are important components in promoting socialization and acculturation of immigrant youth. The question I have stems from a current research project which seeks to determine the effectiveness of a specific intervention method. My population consists of school aged immigrants and whether the educational intervention led to better grade outcomes in their first year of schooling in Houston. The dependent variable is a cumulative grade (0<y<100) the independent 
+variable is their enrollment into the program. control variables include school choice, English language ability and socioeconomic status. 
+First we create Variables
+```{r}
+rm(list=ls())
+set.seed(648057) 
+N = 2000                              
+N_samp <- 50  
+#covariates 
+school=sample(1:10, N, replace=TRUE) # School ID (10 total)
+hist(school)
+ 
+```
+```{r}
+ela <- rbinom(n=N, 1, 0.2)             # English Language ability
+ses <- rnorm(n=N, mean=0, sd=2)        # Socio economic status 
+hist (ses)
+a = 55.5                                    
+b = 5                                      
+b2 = 3.5 
+b3= .4
+tau = 6                                     
+e = rnorm(n=N, mean=0, sd=1)               
+
+#no intervention possible outcomes
+Y_0 <- a + tau*0 + (b*ela) + (b2*ses) + (b3*school) + e  
+
+#intervention outcomes 
+Y_1 <- a + tau*1 + (b*ela) + (b2*ses) + (b3*school) + e  # intervention possible outcomes
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r, echo=TRUE}
+pop_dat <- data.frame(Y_0, Y_1, ela, ses, school) 
+head(pop_dat)
+
+# Now, we consider our sample from here #GIVEN this vector I want to randomly
+sample_ind <- sample(1:nrow(pop_dat), size=N_samp)     # Sampling index
+sample_dat <- pop_dat[sample_ind, ]     #the sample is the population data # Only keep obs that match the index
+head(sample_dat)
+
+d <- ifelse(runif(N_samp)<=0.2, 1, 0)    
+
+# Treatment assignment indicator (1=Treated, 0=Controlled) the .2 is the indicator 
+sample_dat$Y_obs <- d*sample_dat$Y_1 + (1-d)*sample_dat$Y_0  # Observed outcomes
+                                                             # Y_obs = d*Y_1 + (1-d)*Y_0
+sample_dat$Status <- ifelse(d==1, "Treated", "Control")      # Copying the treatment status into sample data
+ 
+head(sample_dat)
+t.test(Y_obs ~ Status, data=sample_dat)
+
+
+# Estimating the average treatment effect
+tau_ate <- mean(sample_dat$Y_obs[sample_dat$Status=="Treated"]) -
+        mean(sample_dat$Y_obs[sample_dat$Status=="Control"])
+tau_ate
+
+```
+
+
+Now we visualize the impact of the treatment 
+```{r}
+boxplot(sample_dat$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"), ylab="Cumalitive Score",
+        main="Distribution of Grades",
+        col=c("blue", "red"))
+
+   par(mfrow=c(2,2))   # Specify the graphic parameter
+   hist(Y_0, xlab=deparse(substitute(Y_0)), 
+        main=paste0("Histogram of", sep=" Control Group", substitute()))
+   hist(Y_1, xlab=deparse(substitute(Y_1)),
+        main=paste0("Histogram of", sep=" Treatment Group", substitute()))
+```
+
+Now we can see the variation in contol variables between the two groups.
+
+```{r}
+  par(mfrow=c(2,2))
+ hist(sample_dat$ses[sample_dat$Status=="Treated"],  
+      main= "Distribution of SES in treatment group ", xlab="ses")
+ hist(sample_dat$ses[sample_dat$Status=="Control"],
+     main= "Distribution of SES in control group", 
+     xlab="ses")
+```
+```
+```{r}
+ par(mfrow=c(2,2))
+ hist(sample_dat$ela[sample_dat$Status=="Treated"],  
+      main= "Distribution of ELA in treatment group ", xlab="English Language Ability")
+ hist(sample_dat$ela[sample_dat$Status=="Control"],
+     main= "Distribution of ELA in control group", 
+     xlab="English Language Ability")
+```
+
+Now we replicate with other sample sizes
+```{r, echo=FALSE}
+N_samp=100
+
+sample_ind <- sample(1:nrow(pop_dat), size=N_samp)     # Sampling index
+sample_dat <- pop_dat[sample_ind, ]     #the sample is the population data # Only keep obs that match the index
+head(sample_dat)
+
+d <- ifelse(runif(N_samp)<=0.2, 1, 0)    
+
+# Treatment assignment indicator (1=Treated, 0=Controlled) the .2 is the indicator 
+sample_dat$Y_obs <- d*sample_dat$Y_1 + (1-d)*sample_dat$Y_0  # Observed outcomes
+                                                             # Y_obs = d*Y_1 + (1-d)*Y_0
+sample_dat$Status <- ifelse(d==1, "Treated", "Control")      # Copying the treatment status into sample data
+
+
+boxplot(sample_dat$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"), ylab="Cumalitive Score N=100",
+        main="Distribution of Grades",
+        col=c("blue", "red"))
+```
+
+```{r, echo=FALSE}
+N_samp=250
+
+sample_ind <- sample(1:nrow(pop_dat), size=N_samp)     # Sampling index
+sample_dat <- pop_dat[sample_ind, ]     #the sample is the population data # Only keep obs that match the index
+head(sample_dat)
+
+d <- ifelse(runif(N_samp)<=0.2, 1, 0)    
+
+# Treatment assignment indicator (1=Treated, 0=Controlled) the .2 is the indicator 
+sample_dat$Y_obs <- d*sample_dat$Y_1 + (1-d)*sample_dat$Y_0  # Observed outcomes
+                                                             # Y_obs = d*Y_1 + (1-d)*Y_0
+sample_dat$Status <- ifelse(d==1, "Treated", "Control")      # Copying the treatment status into sample data
+
+
+boxplot(sample_dat$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"), ylab="Cumalitive Score N=250",
+        main="Distribution of Grades",
+        col=c("blue", "red"))
+```
