@@ -1,0 +1,230 @@
+---
+title: "Social Analysis and Simulation in R"
+subtitle: "R Markdown Tutorial (O-Week Lab Session)"
+author: \emph{Yuki Atsusaka}
+date: "August 5, 2019"
+output:
+  pdf_document:
+    highlight: tango
+geometry: margin=0.8in
+fontfamily: mathpazo
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(lmtest)
+# opts_template$set(
+#   fig_small = list(out.width = 400, out.height = 400),
+#   fig_large = list(out.width = 500, out.height = 500)
+#   )
+# This section includes library or any other pre-analysis codes, which will not be shown in the document
+```
+
+# __1. R Markdown__   <!-- Header -->
+ 
+1. R Markdown has been developed in order to enhance:
+    * communication between analysts and audicence 
+    * collaboration among researchers
+    - research capabilities for data scientists
+
+<br /> 
+
+2. Using R Markdown, you can directly _combine_ a document style explanation with R codes that you used to produce the results. In other words, you do not have to __copy and paste__ text and graphs to make the final document.
+
+<br />
+
+3. You can output your document in various styles including __html__, __pdf__ (you need a TeX environment), __docx__ (you don't need Office), and others. 
+
+
+<br />
+
+
+4. For reference, see _R Markdown: The Definitive Guide_ (2019) by Yihui Xie, J. J. Allaire, Garrett Grolemund ([https://bookdown.org/yihui/rmarkdown/](https://bookdown.org/yihui/rmarkdown/)).
+
+
+# __2. Setting Up__ 
+
+In order to make well-reproducible documents in R Markdown, you need to install two programs/packages: R Markdown and TeX. (Tex is only required for pdf documentation.) First thing first, install the R Markdown \textbf{\textsf{R}} package via:
+
+<br />
+<br /> 
+
+```{r, eval=FALSE}
+install.packages("rmarkdown")
+```
+
+<br /> 
+
+If you have not installed any distribution of TeX, you can install \textsf{tinytex} that is a convenient TeX distribution recommended for R Markdown.  
+
+<br /> 
+
+```{r, eval=FALSE}
+install.packages("tinytex")
+tinytex::install_tinytex()  # install TinyTeX
+```
+
+<br /> 
+
+If you already have some TeX distribution installed, you can skip this part. Note that you can do the above process in \textbf{\textsf{R}}.
+
+<br /> 
+
+  Now, if you finish installation, open up ``SocialAnalysisSimulationR_RMarkdown.rmd'' that is a source code for this pdf document. Then, I wanted to make sure that you can do the following.
+
+1. Reproduce this pdf file by clicking `Knit` button on the tab or `Ctrl + Shift + K` (Windows OS) / `Cmd + Shift + K` (macOS).
+
+2. Let me know (atsusaka@rice.edu) whether you successfully reproduced the document.
+
+
+# __3. Basic Syntax__
+
+## __3.1. Writing and Comment Out__
+Inside .rmd files, you can write sentences as in text editor or microsoft word. If you want to indent, you can type `<br />`. If you want to comment out, you can use: 
+
+
+`<!-- This is how we comment out -->` <!-- Also, this is how we comment out in RMarkdown -->
+
+Other basic syntax include:
+
+*if you want to italicize words* and _also you can do like this_ 
+
+**if you want to emphasize or** and __make words bold__
+
+superscript^2^ 
+
+~~strikethrough because I want to emphasize that this is not a good idea~~  
+
+Finally, you can insert a web linke: [link name](www.rstudio.com) 
+
+
+
+## __3.2. R Chunk__
+If you want to include \textbf{\textsf{R}} code, you can write like this:
+
+```{r}
+x = 2
+y = 3
+x + y
+```
+
+Observe that the result of the operation is automatically shown. If you want to only show the operation without showing results, you can type `eval=FALSE`:
+
+```{r, eval=FALSE}
+x = 2
+y = 3
+x + y
+```
+
+If you want to show the result only (by supressing the original code), you can type `echo=FALSE`
+
+```{r, echo=FALSE}
+z = 2
+zz = 3
+z + zz
+```
+
+
+
+
+If you feel like including R code inline, you can do like this: `x=2+y=3` (this doesn't make sense as R code, but it doesn't evoke any erorr).
+
+
+You can also show a plot:
+
+```{r, fig.width=3, fig.height=4, fig.align='center'}
+x = 1:10
+y = x + rnorm(n=10)
+plot(y ~ x)
+```
+
+\vspace{-1cm}
+
+For basic syntax for R Markdown, please see ([https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)).
+
+
+## __3.3. LaTeX Code__
+
+If you want to use mathematical expressions and other TeX types of expressions (e.g., greek letters), you can directly use LaTeX codes in .rmd files. For reference, please see existing tutorials such as ([http://www.malinc.se/math/latex/basiccodeen.php](http://www.malinc.se/math/latex/basiccodeen.php)) and ([http://web.ift.uib.no/Teori/KURS/WRK/TeX/symALL.html](http://web.ift.uib.no/Teori/KURS/WRK/TeX/symALL.html)). 
+
+
+
+
+
+
+
+# __4. Example: Quantitatively Predictive Logical Models (Day 3)__ 
+
+Based on these assumptions, we now consider the rational model of minority candidate entry. The literature of political ambition often considers the following model of candidate entry:
+
+\begin{equation}
+    u_{it} = \hat P_{it}B_{it} - C_{it},
+\end{equation}
+
+\noindent where $u_{it}$ is the utility that candidate $i$ obtain from running for office at time $t$, $\hat P_{it}$ is the candidate's estimate of the probability of winning if they enter the race, $B_{it}$ is the benefits of holding the office, and $C_{it}$ is the cost of running which is greater than zero, all at time $t$.
+
+[...]
+
+\indent To formalize the idea that we just described, we introduce the following:
+
+\begin{equation}
+    P_{it} =  {\bf F}\Big(\alpha_{it}\underbrace{\Big(\frac{V^{B}_{it-1} - V^{W}_{it-1}}{2}\Big)}_{\text{Last elections}} + (1-\alpha_{it})\underbrace{\beta_{it}}_{\text{Best guess}}\Big),
+\end{equation}
+
+\noindent where $\alpha_{it} = 4\lambda_{it}(1-\lambda_{it}) \in [0,1]$ is a weight parameter on the past information with $\lambda_{it} \in [0,1]$ as the proportion of black voters and $\beta_{it} = 50(2\lambda_{it}-1) \in [-50, 50]$ denotes an speculated marginal vote share under the specified assumptions. $V_{it-1}^{B}$ and $V_{it-1}^{W}$ express the vote share of the top black candidate and white candidate in the last election (i.e., at time $t-1$) and they are known quantities.
+
+<br />
+
+```{r fig.width=6, fig.height=5, fig.align='center'}
+  rm(list=ls())
+  par(mfrow=c(4,3), mar = c(3, 3, 2, 2)) # Default (5,4,4,2) c(bottom, left, top, right)
+  
+  for(i in 0:10){                              # We explore (0,1) in lambda
+
+    lambda_val = i * 0.1                       # Parameters to be varied
+    SD = 17                                    # Parameters to be varied
+    SD_small = 8                               # Parameters to be varied
+    SD_large = 25                              # Parameters to be varied
+        
+    delta = seq(from=-50, to=50, by=0.01)      # Fixed quantities
+    alpha = 4*lambda_val*(1-lambda_val)        # Function of lambda_val
+    beta = 50*(2*lambda_val - 1)               # Function of lambda_val
+    q = alpha * delta + (1-alpha)*beta         # Function of lambda_val
+   
+    prob  <- pnorm(q=q, mean=0, sd=SD)         # Probability of winning
+    prob2 <- pnorm(q=q, mean=0, sd=SD_small)   # Probability of winning
+    prob3 <- pnorm(q=q, mean=0, sd=SD_large)   # Probability of winning
+    prob4 <- pnorm(q=q, mean=-20, sd=SD_small) # Probability of winning
+    
+    plot(prob ~ delta, type="l", lwd=2, ylim=c(0,1), ylab="", 
+        xlab=expression(Delta), cex.main=1.5,  
+        main=substitute(paste(lambda, sep=" = ", v), list(v=lambda_val)))
+    lines(prob2 ~ delta, type="l", lty=2, col="firebrick", lwd=2)
+    lines(prob3 ~ delta, type="l", lty=3, col="navy", lwd=2)
+    lines(prob4 ~ delta, type="l", lty=4, col="forestgreen", lwd=2)
+     }         
+
+  # We want to put a legend on this combined graph
+  plot(1, type = "n", axes=FALSE, xlab="", ylab="") # No plotting
+  legend(x = "topleft", 
+         legend = c("Normal(0,17)", "Normal(0,8)", "Normal(0,25)",
+                    "Normal(-20,8)"), 
+         col=c("black", "firebrick", "navy", "forestgreen"),
+         lty=c(1,2,3,4), ncol=2,
+         lwd=2, cex=1.1, horiz = FALSE, text.width=0.2, box.col = "white")   
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
