@@ -1,0 +1,77 @@
+---
+title: "R.Camp - Homework 3"
+author: "Santiago López Álvarez"
+output: pdf_document
+---
+```{r}
+library(xtable)
+library(stargazer)
+```
+
+**Homework 3 **
+-------------
+-------------
+
+**Simulation exercise**
+
+In this experimental design, I am interested in exploring how much do citizens value democratic liberties and rights depending on the level of exposure to violence. The motivation is precisely to see if violent conditions affect or transform the political attitudes of individuals. The experiment consists of randomly assign half the group to the treatment and the other half to the control group. Subjects in both groups will be given information about the scenario where they live. Control group will be told that they live in relatively safe cities, low crime rates and access to basic social services. Treatment group on the contrary will receive a description of a war zone. After the reading the prompt, subjects will be asked to assess how much they value different political rights. For instance, they will be asked, in a scale from 0 to 100%, how important it's freedom of expression for them. 
+
+**Variables**
+Dependent variable: numeric assessment of democratic rights.
+
+Treatment variable: whether or not they live in a conflict zone.
+
+**Simulation code**
+
+```{r}
+set.seed(234)
+N=40 
+
+zone <- rbinom(n=N, 1, 0.5)
+eval <- rnorm(n=N, mean = 0, sd= 1)
+
+a = 0.7
+b = 4
+b2 = 2
+tef = -5
+e = rnorm(n=N, mean = 0, sd=1)
+
+safe <- a + tef*0 + (b*zone) + (b2*eval) + e
+violent <- a + tef*1 + (b*zone) + (b2*eval) + e
+
+population <- data.frame(safe, violent, zone, eval)
+head(population)
+
+t <- ifelse(runif(N)<=0.5, 1, 0)
+population$Y_obs <-t*population$safe + (1-t)*population$violent
+population$status <- ifelse(t==1, "Treated", "Control")
+head(population)
+```
+
+**Plotting the simulation**
+
+```{r}
+boxplot(population$Y_obs[population$status=="Treated"],
+        population$Y_obs[population$status=="Control"],
+        names=c("Treated","Control"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
