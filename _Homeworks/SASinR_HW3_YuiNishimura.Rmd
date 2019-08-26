@@ -1,0 +1,467 @@
+---
+title: | 
+  | \Large{Homework - Day 3: Simulation II (Experimental Data)}
+subtitle: "Social Analysis and Simulation in R"
+author: ""
+date: ""
+output: 
+  pdf_document:
+    toc: yes
+    toc_depth: 2
+    highlight: tango
+    latex_engine: xelatex
+fontsize: 11pt
+geometry: margin=1.2in
+---
+
+\begin{flushright}
+Yui Nishimura\\
+`r format(Sys.time(), '%d %B %Y')`
+\end{flushright}
+
+# Question 1 
+**Instruction**: In this question, you are asked to simulate an experimental data you would want to analyze if you have all the resources and tools to perform a set of experiments. First, briefly describe a research question that you are interested in, but have not empirically examined or collected any data about. In so doing, consider an experiment with a continuous outcome variable and a binary treatment variable in which some number of units is sampled from a clearly defined population. Consider also other relevant characteristics of individuals in the population such as age, gender, race, and others that you want to take into consideration in your experiment. Next, simulate N data points for these covariates and define them as the population data. Here, choose the most realistic value for N according to your theoretical interest. For example, N can be as large as the U.S. population (about 328,915,700), may be as moderate as students at Rice (about 6700), or could be as small as legislators in Argentine Chamber of Deputies (257). Create also at least one aggregate level covariate (e.g., city level median income).
+
+Now perform any type of sampling, including but not limited to simple random sampling and stratified sampling, on the simulated population data, and draw 50 data points as your initial sample. These are your subjects. Then create a binary treatment variable which indicates units’ treatment status and randomly assign a value to it (0 for the control group and 1 for the treatment group). And simulate the value of the continuous outcome variable as a realization of a random variable following a normal distribution (with a positive variance) whose expected value is a function of all the covariates and the treatment variable. Here set the parameters according to your theoretical expectation and make the most realistic guess about them.
+
+Given the sample data, visualize the difference in the values of the continuous outcome variables for the control and treatment groups at least two ways. Also visualize the differences in the values of covariates for the two groups in your favorite approach. Finally, add the true “treatment effect” (i.e., the parameter you set in the simulation) to the graphs and comment on how much your experiments recover the “treatment effect(s).”
+
+
+## Research Question, Theoretical Interests, and Data
+
+My research question is whether the recognition of discrimination changes attitudes towards the majority rights. Almost all countries historically experienced to govern with the political or economic classes and gave different political and social privilages. Global human rights movements changed the normative recognition about discrimination, and in today's society, such a treatment is recognized as unequal policy or categorized as discrimination in some contexts. However, there is a controversy about education of discrimination. While some argues that it is important to share and educate the history of discrimination to prevent further unfortunate situations for the discriminated group of people, others consider that such a recognition can create a foundation of discriminatory attitutdes, since they could have a chance to aknowledge their difference ("in-group" and "out-grouop"). However, there is limited empirical work to assess whehter and how the recogniztion creates negative or positive effects on issues addressing the discrimination. 
+
+My theoretical expectation is that the information about discrimination against the marginalized population creates positive impact on the general citizens' recognition about the majority rights. The logic behind it is that the discrimination happens usually against the group of people belonging to the minority, based on a specific categorization. If people recognize the categorization can be changed and the new one is applicable to them, they might change their attitudes towards the majority rights. 
+
+
+### Variables of interest, population, and relevant characteristics of individuals
+
+Accordingly, the outcome variable is the feeling thermometer, which can take any values from 0 to 1 (basically the percentage of strong support for the majority rights). The treatment is the exposure to the information about discrimination. The population is the citizens of the Japan, the total is 126,807,358. \footnote{The reason why I choose Japan for this research question is that the Japanese education tend to teach the society as a single ethnic nation. Thus the treatment can work better as new information, compared to other nations where the general population recognize that their country has a varity of population in terms of race, ethnicity, and other identification.}  Individuals vary in age, gender, ethnicity, living place (47 prefectures), education level. 
+
+
+
+## Simulation
+### Data generation 
+
+First, cleaning up the environment. 
+```{r}
+rm(list=ls())
+```
+
+Next, setting the global parameters. 
+```{r}
+# Global parameters
+N = 126807358                              # Population size
+N_samp <- 50                               # Sample size
+```
+
+Here, I generate population paramters. The treatment is randomly assigned to the population. Approximately, a half of the poplation should be assigned the treatment, but the other half is not.  For age, the variable should be positive integer or 0, less than 112. 
+
+The gender balance in Japan is almost even. 98.5\% of the population is estimated as "Japanese people". Here, it is hard to use the real sizes of ethnic groups, since the Japanese government does not publicly report any information about this. 
+```{r}
+set.seed(7272)
+
+# Population parameters 
+treat <- rbinom(n=N, 1, 0.5)             # treatment 
+
+# 
+library("truncnorm")
+age <- round(rtruncnorm(n=N, a=0, b=117, mean = 45, sd = 35))
+gender <- rbinom(n=N, 1, 0.5)
+ethnicity <- rbinom(n=N, 1, 0.15)
+```
+
+To check whether the simulated data aresuccessfully created or not, here I check the visualization of variables. 
+```{r}
+par(mfrow=c(2,2))
+hist(gender)
+hist(age)
+hist(ethnicity)
+```
+
+Now, turning into the creation of the outcome variable, the feeling thermometer. First, I fix parameter values, and then creat the potential outcomes produced by treate and untreated cases. In general, it is expected that people do not have a strong opinion about the majority or minority rights. 
+```{r}
+a = 50                            # Intercept: Ground mean - neutral
+b1 = .02                            # (Fixed=constant) effects of age 
+b2 = -.1                           # (Fixed=constant) effects of gender
+b3 = -5                            # (Fixed=constant) effects of ethnicity 
+tau = -10                          # (Fixed=constant) positive tereatment effect  
+
+# Potential outcomes 
+set.seed(7272)
+Y_0 <- rnorm(n = N,
+             mean = a + tau*0 + (b1*age) + (b2*gender) + (b3*ethnicity),  # not treated
+             sd = 1) 
+Y_1 <- rnorm(n = N, 
+             mean = a + tau*1 + (b1*age) + (b2*gender) + (b3*ethnicity),  # treated
+             sd = 1)
+```
+
+Finally, storing the all variables in one dataset. 
+```{r}
+# population level data
+pop_dat <- data.frame(Y_0, Y_1, age, gender, ethnicity) 
+head(pop_dat)
+```
+
+
+Now, sampling from the saved dataset. 
+```{r}
+sample_ind <- sample(1:nrow(pop_dat), size=N_samp)  # sampling index
+sample_dat <- pop_dat[sample_ind, ]                 # only keep obs that match the index
+head(sample_dat)
+
+sample_dat$d <- ifelse(runif(N_samp)<=0.5, 1, 0)     # treatment assignment indicator (1=Tteated, 0=controlled)
+
+# Observed outcomes: Y_obs = d*Y_1 + (1-d)*Y_0
+# Y_obs = d*Y_1 + (1-d)*Y_0
+sample_dat$Y_obs <- sample_dat$d*sample_dat$Y_1 + (1-sample_dat$d)*sample_dat$Y_0  
+                                                             
+sample_dat$Status <- ifelse(sample_dat$d==1, "Treated", "Control")      # saving the treatment status into sample data
+head(sample_dat)
+```
+
+### Visualization of the difference in the outcome variable
+
+```{r}
+boxplot(sample_dat$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"))
+
+
+y_mean <- c(mean(sample_dat$Y_obs[sample_dat$Status=="Control"]),
+            mean(sample_dat$Y_obs[sample_dat$Status=="Treated"]))
+y_sdv <- c(sd(sample_dat$Y_obs[sample_dat$Status=="Control"]),
+           sd(sample_dat$Y_obs[sample_dat$Status=="Treated"]))
+t <- c(0,1)
+plot(y_mean ~ t, pch=16, ylim=range(c(y_mean-y_sdv, y_mean+y_sdv)),
+     xlab="Outcomes Status", ylab="Y_obs ± sd",xaxt="n") # Without x-axis lable
+axis(1, at = seq(00, 1, by = 1), las=1) # If las=2, numbers will be flipped by 90 degree
+arrows(t, y_mean-y_sdv, t, y_mean+y_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result")
+```
+
+
+
+
+
+
+```{r}
+library("RColorBrewer")
+myColours <- brewer.pal(5,"Blues")
+
+my.settings <- list(
+  superpose.polygon=list(col=myColours[2:5], border="transparent"),
+  strip.background=list(col=myColours[6]),
+  strip.border=list(col="black")
+)
+
+library('lattice')
+histogram(~ Y_obs | Status, data = sample_dat, scales=list(alternating=1),    
+          auto.key=list(space="top", columns=4, 
+          points=FALSE, rectangles=TRUE,
+          title="District", cex.title=1),
+          col = "maroon", 
+          main = paste("Histograms of observed outcomes grouping by treatment status"),
+          xlab = "Treatment Status", ylab = "Frequency",
+          par.settings = my.settings)
+```
+
+
+
+
+### Visualization of covariates 
+
+
+```{r}
+par(mfrow=c(1,3))
+
+# age
+boxplot(sample_dat$age[sample_dat$Status=="Treated"],
+        sample_dat$age[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"),
+        main=paste("Age"),
+        xlab="Treatment Status")
+
+
+# gender
+boxplot(sample_dat$gender[sample_dat$Status=="Treated"],
+        sample_dat$gender[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"),
+        main=paste("Gender"),
+        xlab="Treatment Status")
+
+# ethnicity
+boxplot(sample_dat$ethnicity[sample_dat$Status=="Treated"],
+        sample_dat$ethnicity[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"),
+        main=paste("Ethnicity"),
+        xlab="Treatment Status")
+```
+
+Seemingly, there is no remarkable difference across treatment and control groups for covariates. 
+
+```{r}
+par(mfrow=c(1,3))
+
+# age
+c1_mean <- c(mean(sample_dat$age[sample_dat$Status=="Control"]),
+            mean(sample_dat$age[sample_dat$Status=="Treated"]))
+c1_sdv <- c(sd(sample_dat$age[sample_dat$Status=="Control"]),
+           sd(sample_dat$age[sample_dat$Status=="Treated"]))
+plot(c1_mean ~ t, pch=16, ylim=range(c(c1_mean-c1_sdv, c1_mean+c1_sdv)),
+     xlab="Treatment Status", ylab="Age ± sd",xaxt="n") # Without x-axis lable
+axis(1, at = seq(00, 1, by = 1), las=1) # If las=2, numbers will be flipped by 90 degree
+arrows(t, c1_mean-c1_sdv, t, c1_mean+c1_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result - Age")
+
+# gender
+c2_mean <- c(mean(sample_dat$gender[sample_dat$Status=="Control"]),
+            mean(sample_dat$gender[sample_dat$Status=="Treated"]))
+c2_sdv <- c(sd(sample_dat$gender[sample_dat$Status=="Control"]),
+           sd(sample_dat$gender[sample_dat$Status=="Treated"]))
+plot(c2_mean ~ t, pch=16, ylim=range(c(c2_mean-c2_sdv, c2_mean+c2_sdv)),
+     xlab="Treatment Status", ylab="Gender ± sd",xaxt="n") # Without x-axis lable
+axis(1, at = seq(00, 1, by = 1), las=1) # If las=2, numbers will be flipped by 90 degree
+arrows(t, c2_mean-c2_sdv, t, c2_mean+c2_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result - Gender")
+
+# ethnicity
+c3_mean <- c(mean(sample_dat$ethnicity[sample_dat$Status=="Control"]),
+            mean(sample_dat$ethnicity[sample_dat$Status=="Treated"]))
+c3_sdv <- c(sd(sample_dat$ethnicity[sample_dat$Status=="Control"]),
+           sd(sample_dat$ethnicity[sample_dat$Status=="Treated"]))
+plot(c3_mean ~ t, pch=16, ylim=range(c(c3_mean-c3_sdv, c3_mean+c3_sdv)),
+     xlab="Treatment Status", ylab="Ethnicity ± sd",xaxt="n") # Without x-axis lable
+axis(1, at = seq(00, 1, by = 1), las=1) # If las=2, numbers will be flipped by 90 degree
+arrows(t, c3_mean-c3_sdv, t, c3_mean+c3_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result - Ethnicity")
+
+```
+This visualization confirms as well.
+
+
+
+### Visualization of differences between the true ATE and the estimated ATE
+
+Here I would like to show the difference between estimated average effects and the true average effects. To do so, we have to extract the true effect, by taking the mean difference between potential outcomes in the population dataset. On the other hand, the estimated average effect is the mean difference of the sample. Here I compare them.
+```{r}
+# Population level treatment (fixed=constant) effect
+tau_true <- mean(pop_dat$Y_1 - pop_dat$Y_0) # Mean Difference of Individual Potential Outcomes
+tau_true
+
+# Estimating the average treatment effect
+tau_hat <- mean(sample_dat$Y_obs[sample_dat$Status=="Treated"]) -
+           mean(sample_dat$Y_obs[sample_dat$Status=="Control"])
+tau_hat
+```
+While the true value of average treatment effect (ATE) is approximately -10, as I setted, the value of the estimated average treatment effect is near -10 but not as near as the true ATE. 
+
+```{r}
+t.test(Y_obs ~ Status, data=sample_dat)
+```
+According to the result of the t-test, this difference is statistically significant. Next, I visualize the difference of these two in histogram with the true average treatment effect. 
+
+```{r}
+diff <- sample_dat$Y_obs[sample_dat$Status=="Treated"] - sample_dat$Y_obs[sample_dat$Status=="Control"]
+hist(diff, main = paste("Differences of Treatment Status \n in Sample"), 
+     xlab = "Difference of Outcomes", breaks=20)
+abline(v=tau_true, col="midnightblue", lwd="2", lty=2)  # Add a line: true ATE
+abline(v=tau_hat, col="maroon", lwd="2", lty=2)         # Add another: estimated ATE
+legend("topleft", legend=c("True ATE", "Estimated ATE"),             # Add legend
+        col=c("navy", "firebrick"), lty=c(2,2)) 
+```
+
+
+
+
+\newpage
+
+## Problem 2
+
+**Instruction**: Repeat the same simulation by changing the number of samples from 50, 100, 150, 200 to 250, and create a graph that combines five plots for the difference in means or distributions.
+
+### Simulation of Different Samples
+
+```{r}
+N_samp <- 100
+sample_ind2 <- sample(1:nrow(pop_dat), size=N_samp)  # sampling index
+sample_dat2 <- pop_dat[sample_ind2, ]                 # only keep obs that match the index
+head(sample_dat2)
+
+sample_dat2$d <- ifelse(runif(N_samp)<=0.5, 1, 0)     # treatment assignment indicator (1=Tteated, 0=controlled)
+
+# Observed outcomes: Y_obs = d*Y_1 + (1-d)*Y_0
+# Y_obs = d*Y_1 + (1-d)*Y_0
+sample_dat2$Y_obs <- sample_dat2$d*sample_dat2$Y_1 + (1-sample_dat2$d)*sample_dat2$Y_0  
+                                                             
+sample_dat2$Status <- ifelse(sample_dat2$d==1, "Treated", "Control")      # saving the treatment status into sample data
+```
+
+
+
+
+```{r}
+N_samp <- 150
+sample_ind3 <- sample(1:nrow(pop_dat), size=N_samp)  # sampling index
+sample_dat3 <- pop_dat[sample_ind3, ]                 # only keep obs that match the index
+head(sample_dat3)
+
+sample_dat3$d <- ifelse(runif(N_samp)<=0.5, 1, 0)     # treatment assignment indicator (1=Tteated, 0=controlled)
+
+# Observed outcomes: Y_obs = d*Y_1 + (1-d)*Y_0
+# Y_obs = d*Y_1 + (1-d)*Y_0
+sample_dat3$Y_obs <- sample_dat3$d*sample_dat3$Y_1 + (1-sample_dat3$d)*sample_dat3$Y_0  
+                                                             
+sample_dat3$Status <- ifelse(sample_dat3$d==1, "Treated", "Control")      # saving the treatment status into sample data
+```
+
+
+
+
+
+```{r}
+N_samp <- 200
+sample_ind4 <- sample(1:nrow(pop_dat), size=N_samp)  # sampling index
+sample_dat4 <- pop_dat[sample_ind4, ]                 # only keep obs that match the index
+head(sample_dat4)
+
+sample_dat4$d <- ifelse(runif(N_samp)<=0.5, 1, 0)     # treatment assignment indicator (1=Tteated, 0=controlled)
+
+# Observed outcomes: Y_obs = d*Y_1 + (1-d)*Y_0
+# Y_obs = d*Y_1 + (1-d)*Y_0
+sample_dat4$Y_obs <- sample_dat4$d*sample_dat4$Y_1 + (1-sample_dat4$d)*sample_dat4$Y_0  
+sample_dat4$Status <- ifelse(sample_dat4$d==1, "Treated", "Control")      # saving the treatment status into sample data
+```
+
+
+
+```{r}
+N_samp <- 250
+sample_ind5 <- sample(1:nrow(pop_dat), size=N_samp)  # sampling index
+sample_dat5 <- pop_dat[sample_ind5, ]                 # only keep obs that match the index
+head(sample_dat5)
+
+sample_dat5$d <- ifelse(runif(N_samp)<=0.5, 1, 0)     # treatment assignment indicator (1=Tteated, 0=controlled)
+
+# Observed outcomes: Y_obs = d*Y_1 + (1-d)*Y_0
+# Y_obs = d*Y_1 + (1-d)*Y_0
+sample_dat5$Y_obs <- sample_dat5$d*sample_dat5$Y_1 + (1-sample_dat5$d)*sample_dat5$Y_0  
+sample_dat5$Status <- ifelse(sample_dat5$d==1, "Treated", "Control")      # saving the treatment status into sample data
+```
+
+
+
+
+### A Graph of Combined Plots
+By using the stored data sets, I create box plots and caterpillar plots for each case. Before that, to show the combined graphs clearly, I enlarged the size of figures by `knitr::opts_chunk()` settings. 
+
+```{r}
+# this is the setting to show the combined graphs more largely
+knitr::opts_chunk$set(warning = FALSE, echo = TRUE, message = TRUE,
+                      # setting for chunk options 
+                      fig.width = 8, fig.height = 8, fig.align="center")
+                      # setting for figure output
+```
+
+Then, as before, I create the box plots. 
+```{r}
+par(mfrow=c(3,2))
+
+boxplot(sample_dat$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"), 
+        main=paste("Sample size = 50"))
+
+boxplot(sample_dat2$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat2$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"), 
+        main=paste("Sample size = 100"))
+
+boxplot(sample_dat3$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat3$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"), 
+        main=paste("Sample size = 150"))
+
+boxplot(sample_dat4$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat4$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"), 
+        main=paste("Sample size = 200"))
+
+boxplot(sample_dat5$Y_obs[sample_dat$Status=="Treated"],
+        sample_dat5$Y_obs[sample_dat$Status=="Control"],
+        names=c("Treated", "Control"), 
+        main=paste("Sample size = 250"))
+```
+
+
+Seemingly, as more sample we have, the difference between treated or control groups becomes smaller. To confirm this tendency, I also create the caterpiller plots.
+
+```{r}
+par(mfrow=c(3,2))
+
+y_mean <- c(mean(sample_dat$Y_obs[sample_dat$Status=="Control"]),
+            mean(sample_dat$Y_obs[sample_dat$Status=="Treated"]))
+y_sdv <- c(sd(sample_dat$Y_obs[sample_dat$Status=="Control"]),
+           sd(sample_dat$Y_obs[sample_dat$Status=="Treated"]))
+plot(y_mean ~ t, pch=16, ylim=range(c(y_mean-y_sdv, y_mean+y_sdv)),
+     xlab="Outcomes Status", ylab="Y_obs ± sd",xaxt="n", 
+     main=paste("Sample size = 50")) 
+axis(1, at = seq(00, 1, by = 1), las=1) 
+arrows(t, y_mean-y_sdv, t, y_mean+y_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result")
+
+
+y_mean <- c(mean(sample_dat2$Y_obs[sample_dat$Status=="Control"]),
+            mean(sample_dat2$Y_obs[sample_dat$Status=="Treated"]))
+y_sdv <- c(sd(sample_dat2$Y_obs[sample_dat$Status=="Control"]),
+           sd(sample_dat2$Y_obs[sample_dat$Status=="Treated"]))
+plot(y_mean ~ t, pch=16, ylim=range(c(y_mean-y_sdv, y_mean+y_sdv)),
+     xlab="Outcomes Status", ylab="Y_obs ± sd",xaxt="n", 
+     main=paste("Sample size = 100")) 
+axis(1, at = seq(00, 1, by = 1), las=1) 
+arrows(t, y_mean-y_sdv, t, y_mean+y_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result")
+
+
+
+y_mean <- c(mean(sample_dat3$Y_obs[sample_dat$Status=="Control"]),
+            mean(sample_dat3$Y_obs[sample_dat$Status=="Treated"]))
+y_sdv <- c(sd(sample_dat3$Y_obs[sample_dat$Status=="Control"]),
+           sd(sample_dat3$Y_obs[sample_dat$Status=="Treated"]))
+plot(y_mean ~ t, pch=16, ylim=range(c(y_mean-y_sdv, y_mean+y_sdv)),
+     xlab="Outcomes Status", ylab="Y_obs ± sd",xaxt="n", 
+     main=paste("Sample size = 150")) 
+axis(1, at = seq(00, 1, by = 1), las=1) 
+arrows(t, y_mean-y_sdv, t, y_mean+y_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result")
+
+
+
+y_mean <- c(mean(sample_dat4$Y_obs[sample_dat$Status=="Control"]),
+            mean(sample_dat4$Y_obs[sample_dat$Status=="Treated"]))
+y_sdv <- c(sd(sample_dat4$Y_obs[sample_dat$Status=="Control"]),
+           sd(sample_dat4$Y_obs[sample_dat$Status=="Treated"]))
+plot(y_mean ~ t, pch=16, ylim=range(c(y_mean-y_sdv, y_mean+y_sdv)),
+     xlab="Outcomes Status", ylab="Y_obs ± sd",xaxt="n", 
+     main=paste("Sample size = 200")) 
+axis(1, at = seq(00, 1, by = 1), las=1) 
+arrows(t, y_mean-y_sdv, t, y_mean+y_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result")
+
+
+y_mean <- c(mean(sample_dat5$Y_obs[sample_dat$Status=="Control"]),
+            mean(sample_dat5$Y_obs[sample_dat$Status=="Treated"]))
+y_sdv <- c(sd(sample_dat5$Y_obs[sample_dat$Status=="Control"]),
+           sd(sample_dat5$Y_obs[sample_dat$Status=="Treated"]))
+t <- c(0,1)
+plot(y_mean ~ t, pch=16, ylim=range(c(y_mean-y_sdv, y_mean+y_sdv)),
+     xlab="Outcomes Status", ylab="Y_obs ± sd",xaxt="n", 
+     main=paste("Sample size = 250")) 
+axis(1, at = seq(00, 1, by = 1), las=1) 
+arrows(t, y_mean-y_sdv, t, y_mean+y_sdv, length=0, angle=90, lwd=3)
+title("Simulated Result")
+```
+
+
+

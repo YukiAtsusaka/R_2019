@@ -1,0 +1,252 @@
+---
+title: | 
+  | \Large{Homework - Day 1: Data Exploration}
+subtitle: "Social Analysis and Simulation in R"
+author: \emph{Yui Nishimura}
+date: ""
+output: 
+  pdf_document:
+    toc: false
+    toc_depth: 2
+    highlight: tango
+    latex_engine: xelatex
+    number_sections: true
+fontsize: 11pt
+geometry: margin=1.2in
+---
+
+  
+# Problem 
+**Instruction**: Choose one observational data of your interest. Imagine that you are writing a paper using the data and an appendix for descriptive statistics. Based on your theoretical interest (and after explaining your research questions), provide a set of summaries of your data both numerically and visually. When visualizing the data using scatter plots, histogram, correlation plots, and etc, make sure that you do so by always following the theoretical range of your variables of interest (i.e., when plotting a variable denoting proportion, the plot must show its theoretical minimum and maximum, and thus, 0 and 1). Comment on several variables that you find interesting and discuss how much the empirical distributions of the values of these variables deviate from the theoretical distributions of them (or your expectations on them). If possible, visualize such expectation on the same plots as well.
+
+
+
+
+## Introduction
+
+Why do states voluntarily participate to the Universal Periodic Review (UPR) even though party countries share political affinity? The UPR is the peer review system created by the United Nations (UN), which launched with the establishemnent the Human Rights Council in 2008. Given the cumulated critics against its predecessor, the Human Rights Commissions, member countries purported to avoid politicizing institutional settings and promote fair monitoring of human rights practices in the member countries.
+
+According to the literature, peer review system across countries seemingly reflects relationships between them. Thus, my theoretical interest is whether recommendations submitted by the friendly countries are more latient on the states under the review.
+%>% 
+
+
+## Variables and Data
+
+The dataset is structured with recommendation as a unit of analysis. The outcome variable is _Severity of Recommendations_, which indicate the severity level of recommendation. The non-governmental organization, UPR Info, collected all the UPR data including the severity of recommendations based on wordings. According to their coding rules, the severity indicator provides 5 ordered category, where the larger number represents harsher contents, and vice versa. Recommendations numbered as small just suggest to report more information, or share their policy experiences. According to the coding rules, the details of categories are summarized as follows (https://www.upr-info.org/database/files/Database_Action_Category.pdf). 
+
+1. Recommendation directed at non-SuR states, or calling upon the SuR to request technical assistance, or share information 
+    + Example of verbs: call on, seek, share
+2. Recommendation emphasizing continuity
+    + Example of verbs: continue, maintain, persevere, persist, pursue
+3. Recommendation to consider change 
+    + Example of verbs: analyse, consider, envisage envision, examine, explore, reflect upon, revise, review, study
+4. Recommendation of action that contains a general element 
+    + Example of verbs: accelerate, address, encourage, engage with, ensure, guarantee, intensify, promote, speed up, strengthen, take action, take measures or steps towards
+5. Recommendation of specific action 
+    + Example of verbs: conduct, develop, eliminate, establish, investigate, undertake as well as legal verbs: abolish, accede, adopt, amend. implement, enforce, ratify
+
+
+By using this scheme, each recommendation is coded within the range from 1 to 5, since wordings at different levels are used at one time. In such cases, the coders take averages of severity ranks based on frequency of each word.
+
+Variables of interest to explain the variations across recommendation should capture how closely the two countries are related or the extent of shared strategic interests. Here I employ _alliance_, _foreign aid_, and _voting behavior at the UN_ as ones of typical political partnership. 
+
+
+For the sake of this purpose, I employed datasets developed by Levoic and Voeten (2017), which include the necessary variables I argue here. This dataset is available from https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/10087. 
+
+
+## Preparation 
+
+Now I start to explore the relationship between variables of interest. First, I clean up the environment. 
+```{r clean-up, results=FALSE}
+rm(list=ls()) # rm() cleans up your R
+gc();gc()     # gc() cleans up your memory
+```
+
+There are packages the following excircise use. 
+```{r loading packages, warning=FALSE}
+library("haven")
+library("corrplot")
+library("PerformanceAnalytics") 
+library("xtable")
+```
+
+Here I load the datasets. 
+```{r loading data, results=FALSE}
+# For mac, I need to specify the encoding as below since this dataset includes the string variables
+df1 <- read_dta("data/merged_data.dta", encoding = "latin1")
+head(df1)
+```
+
+As we can see on the above, this dataset originally include so many variables which unnecessary for the purpose here. Therefore, I extract only relevant variables as follows. 
+```{r}
+# the name of columns I need
+keeps <- c("ccode1", "ccode2", "year", "action", "alliance", "SenderAidDonor", "TargetAidDonor", "session", "jointvotes3", "response")
+df2 <- df1[keeps]
+
+# check the new data
+summary(df2)
+```
+
+The original dataset consists of dyad-year as the unit of analysis. However, I do not examine the relations between dyad and recommendations. But, I am interested in how the contents of recommendation can be differensiated over the relationship of recommending countries and countries under review. Therefore, I have to reconstruct the data by making recommendation as the unit of analysis. To do so, I ommitted rows which include NA in the action variable, because all recommendations have been evaluated to indicate their level of requirement. In other words, if there is no evaluation for recommendation, recommendation does not exist for that dyad-year. And then, I confirm whether the new data is successfully created or not. 
+```{r}
+# extracting the targetted data
+df3 <- subset(df2, !is.na(df1$action))
+head(df3)
+
+# creating id for row
+df3$id <- NA                    
+df3$id <- seq.int(nrow(df3))  
+
+# successfully capturing the time period - 2008 (the establishment of UPR) to 2014
+summary(df3$year)   
+```
+
+
+
+
+## Numerical Descriptive Statistics
+Now, I start to explore the variables of interests. 
+```{r}
+summary(df3$action)
+unique(df3$action)
+```
+
+We also can use `table()` to confirm the frequently observed combination of data by two variables. In this case, the outcome variable can take a lot of values, so it might not be sufficient. But if we are interested in some data which are theoretically observed more than others (in this case, the integer outcomes), it might be useful to look up once to confirm the expectation.  Here I only extract first twenty observations as an example.
+```{r}
+table(head(df3$action, 20), head(df3$alliance, 20))
+```
+
+To output the data itself in \LaTeX format, we can use `xtable() function'. It is useful to save the table once and print it to add additional setting of the table. Here I only extract the first five observations. 
+```{r, results='asis'}
+library("xtable")
+t1 <- xtable(head(df3, caption = "The Data Set", table.placement =""))
+print(t1, scalebox=.8, caption.placement = "top")
+```
+
+`xtable()` is also used for summary statistics of the dataset itself.\footnote{The combination of `xtable()` and `summary()` is only available for dataframe. To see the descriptive statistics of a vector by using `xtable`, we have to use the vector directly to the `xtable` or use `data.frame()` within the `summary()`.} Here I extract some variables of interest.
+
+```{r, results='asis'}
+t2 <- xtable(summary(df3[,c(3:5,7,9,10)], 
+                     caption = "Summary Statistics of the Data Set", 
+                     table.placement =""))
+print(t2, scalebox=.8, caption.placement = "top")
+```
+
+
+
+## Visual Descriptive Statistics  
+
+Here I see the histogram of each variable first to see their distribution. To make the graph more informative, the mean and the median are calculated and added.
+```{r}
+par(mfrow=c(2,2))
+hist(df3$action, xlab="Severity of Recommendation", ylab="Frequency", 
+     main="Severity Variable")
+abline(v=mean(df3$action, na.rm = TRUE), 
+       col="midnightblue", lwd="2", lty=2)  # Add a line
+abline(v=median(df3$action, na.rm = TRUE), 
+       col="maroon", lwd="2", lty=2) # Add another line
+legend("topleft", legend=c("Mean", "Median"),             # Add legend
+        col=c("navy", "firebrick"), lty=c(2,2)) 
+
+hist(df3$alliance, xlab="Alliance", ylab="Frequency", main="Alliance Variable")
+abline(v=mean(df3$alliance, na.rm = TRUE), col="navy", lwd="2", lty=2)      
+abline(v=median(df3$alliance, na.rm = TRUE), col="firebrick", lwd="2", lty=2) 
+legend("topright", legend=c("Mean", "Median"),             
+        col=c("navy", "firebrick"), lty=c(2,2)) 
+
+hist(df3$TargetAidDonor, xlab="Target is aid donor", ylab="Frequency", main="Aid Variable")
+abline(v=mean(df3$TargetAidDonor, na.rm = TRUE), col="navy", lwd="2", lty=2)      
+abline(v=median(df3$TargetAidDonor, na.rm = TRUE), col="firebrick", lwd="2", lty=2) 
+legend("topright", legend=c("Mean", "Median"),             
+        col=c("navy", "firebrick"), lty=c(2,2)) 
+
+hist(df3$jointvotes3, xlab="Joint UN Vote", ylab="Frequency", main="UN Voting Variable")
+abline(v=mean(df3$jointvotes3, na.rm = TRUE), col="navy", lwd="2", lty=2)      
+abline(v=median(df3$jointvotes3, na.rm = TRUE), col="firebrick", lwd="2", lty=2) 
+legend("topleft", legend=c("Mean", "Median"),             
+        col=c("navy", "firebrick"), lty=c(2,2)) 
+```
+
+
+Here I use boxplot and the violine plot. Since the possible range of variable is largely different for joint UN voting vairable, I make the sole figure for it.
+```{r, warning=FALSE, message=FALSE}
+boxplot(df3$action, df3$alliance, df3$TargetAidDonor)
+boxplot(df3$jointvotes3)
+        
+head(df3)
+library("vioplot")
+vioplot(df3$action, col="cadetblue")
+vioplot(df3$alliance, df3$TargetAidDonor, col="olivedrab")
+vioplot(df3$jointvotes3, col="olivedrab")
+```
+
+
+Plotting the relationships between the outcome and the independent variables. 
+```{r}
+par(mfrow=c(2,2))
+plot(df3$action, df3$alliance, xlab = "Sevirity of Recommendation", 
+     ylab = "Alliance")
+plot(df3$action, df3$TargetAidDonor, xlab = "Sevirity of Recommendation", 
+     ylab = "Aid")
+plot(df3$action, df3$jointvotes3, xlab = "Sevirity of Recommendation", 
+     ylab = "UN Voting")
+```
+
+Looking at the bivariate relaitonship between variables, by using `corrplot()` and `chart.Corrrelation()`. 
+```{r}
+cor(df3[,c(4,5,7,9)], use = "complete.obs")    # correlation matrix without NA (only with complete observations)
+round(cor(df3[,c(4,5,7,9)], use = "complete.obs"), digit=2) # rounding numbers
+
+# visualizing correlation
+# library("corrplot")
+co_mat <-  cor(df3[,c(4,5,7,9)], use = "complete.obs")     # ssing correlation matrix
+corrplot(co_mat, type="upper")
+ 
+# library("PerformanceAnalytics") 
+chart.Correlation(df3[,c(4,5,7,9)], histogram=TRUE, pch=19)
+```
+
+Interestingly, only the relation between the alliance and action is negative. This is in line with the theoretical expectation. Surprisingly, the other two show the opposite direction of coorelation. So, it is unintuitive but correlation take into account the all recommendations, regardless of time variation. Further investigations are important to think more about these variables. 
+
+\newpage
+
+# Question
+
+**Instruction**: Using the same dataset, explore a set of possible theoretical relationships between two variables of your interest. In other words, find several quantitatively predictive logical models that may account for the functional forms of Variable X explaining Variable Y. Remember (from the readings) that the relationship between the two variables may not be necessarily linear. While you can choose any functional form based on quadratic, square root, natural log, and other transformations, always provide a theoretical rationale of using such transformation of one or two variables. When you find the best functional form you can get, plot the functional form with the scatter plot of these variables. Add any "anchor points" and conceptually "forbidden areas" to the graph. If you have some grouping variables that you are interested in (e.g., majoritarian systems v. proportional representation systems), make sure that you visualize such distinction on the plot and discuss whether your best logical model fits both types of data. Finally, perform a Normal-linear model with the two variables and report a coefficient table and $R^2$ statistic. Comment on the extent to which “linear regression” is helpful to discover the theoretical functional form. 
+
+## Two Variables of Interest
+
+According to the above, it is interesting to see the relationship between alliance and the level of recommendaiton further. Theoretically, it is expected that the alliance formation hinders members to make a statement criticizing the other member(s), since they share the strategic interest and members are interdependent each other, so damaging their relationship is risky for future cooperation. Based on this expectation, the data generation process is: 
+
+$$
+\mbox{Severity Level}_i \sim(\mu_i, \sigma)
+$$
+$$
+\mu_i = \alpha + \beta \times \mbox{alliance}_i 
+$$
+
+Here, the main indenpendent variable, alliance, is dichotomous variable, which only can take 0 or 1. On the other hand, the severity level vairable can take values from 0 to 5. Considering expectedly negative relationship between alliance and the severity level, $\beta$ is greater than 0. Since the outcome variable should be larger than 0, 
+then $\alpha$ should be within the range between 1 and 5.
+
+
+### Visualization of the Functional Form
+
+
+### Performing Normal-Linear Model
+
+```{r}
+fit <- lm(action ~ alliance, data = df3)
+summary(fit)
+```
+
+To produce the \LaTeX format table, I use `stargazer()`. In R markdown, the chunk option need to be setted as `results = 'asis'`. In default, $R^2$ is included in stargazer output.  
+```{r, results='asis', message=FALSE}
+library("stargazer")
+stargazer(fit)
+```
+
+```{r}
+plot(fit)
+```
+
+
